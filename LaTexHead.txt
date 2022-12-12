@@ -1,0 +1,11 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[russian]{babel}
+\usepackage{amsmath}
+\usepackage{graphics}
+\usepackage{amsfonts}
+\title{Math Meth}
+\date{}
+\begin{document}
+\maketitle
+\newpage
+\center

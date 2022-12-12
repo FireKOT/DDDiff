@@ -5,6 +5,9 @@
 #define ERR_PROCESS_ON
 
 
+const size_t STRS = 1000;
+
+
 enum Errors {
     ERR_NULL_PTR    = 1,        ///< NULL pointer
     ERR_INVAL_ARG   = 2,        ///< invaluable arg
@@ -18,12 +21,14 @@ enum Errors {
     ERR_SEG_FAULT   = 10,
     ERR_INCRR_FILE  = 11,
     ERR_INCRR_INPUT = 12,
+    ERR_DIFF_ERR    = 13,
 };
 
 enum Syntax_Err {
     ERR_SYNTAX_ERR     = 1,
     ERR_NUM_SYNTAX     = 2,
-    ERR_BRACKET_SYNTAX = 3,
+    ERR_VAR_SYNTAX     = 3,
+    ERR_BRACKET_SYNTAX = 4,
 };
 
 enum Warnings {
@@ -52,6 +57,16 @@ enum Warnings {
         if (warn_cond) {                                                                                    \
             printf("Warning code: %s in file: %s in function %s in line %d\n", #warn_code, __FILE__,        \
             __PRETTY_FUNCTION__, __LINE__);                                                                 \
+        }                                                                                                   \
+    }
+
+    #define SYNTAX_ERR_PROC(err_cond, err_code, str, pos, ret_val) {                                        \
+        if (err_cond) {                                                                                     \
+            printf("Error code: %s in file: %s in function %s in line %d\n", #err_code, __FILE__,           \
+            __PRETTY_FUNCTION__, __LINE__);                                                                 \
+            printf("%s\n", str);                                                                            \
+            printf("%*c\n", pos + 1, '^');                                                                    \
+            return ret_val;                                                                                 \
         }                                                                                                   \
     }
 

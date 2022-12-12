@@ -1,0 +1,49 @@
+<style>
+
+    ::-webkit-scrollbar { width: 0;}
+
+    @font-face {
+        font-family: hoefler;
+        src: url("fonts/hoeflertext.otf");
+    }
+
+    summary {
+        background-color: RGB(0, 0, 0);
+        border-radius: 15px;
+        font-weight: bold;
+        margin: .5em .5em 0;
+        padding: .5em;
+
+        font-family: hoefler;
+        text-align: center;
+        font-size: 15pt;
+    }
+
+    summary:hover {
+        font-size: 17pt;
+        transition: 0.3s;
+        transition-timing-function: ease;
+    }
+
+    summary:not(:hover) {
+        font-size: 15pt;
+        transition: 0.3s;
+        transition-timing-function: ease;
+    }
+
+    div {
+        text-align: center;
+    }
+
+    .dump {
+        color: #b804e0;
+        border: 3px solid #b804e0;
+    }
+
+    body {
+        background: url("backgrounds/background.gif");
+        background-size: cover;
+        background-attachment: fixed;
+    }
+
+</style>
