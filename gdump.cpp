@@ -52,7 +52,7 @@ void GraphDump (node_t *root, const char *file, const char *funk, int linenum) {
     sprintf(cmd, "dot %s -T svg -o %s", file_name, img_name);
     system(cmd);
 
-    fprintf(html, "<details open>\n");
+    fprintf(html, "<details>\n");
     fprintf(html, "<summary class = \"dump\">Dump #%d In file %s in function %s in line %d</summary>\n",GDumpNum+1, file, funk, linenum);
     fprintf(html, "<div> <img src = %s> </div>\n", img_name);
     fprintf(html, "</details>\n\n");

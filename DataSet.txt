@@ -1,0 +1,3 @@
+function: sinx^3 + (cos(15*x))^4
+decomposition point: 0
+decomposition order: 5

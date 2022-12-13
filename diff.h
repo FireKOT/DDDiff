@@ -55,19 +55,28 @@ struct lexnode_t {
 };
 
 node_t *OpNodeCtor       (int op, node_t *left = nullptr, node_t *right = nullptr);
-node_t *NumNodeCtor      (elem_t num, node_t *left = nullptr, node_t *right = nullptr);
-node_t *VarNodeCtor      (char *var, node_t *left = nullptr, node_t *right = nullptr);
+node_t *NumNodeCtor      (elem_t num);
+node_t *VarNodeCtor      (const char *var);
 void    DiffNodeDtor     (node_t *node);
 void    FreeOnlyThisNode (node_t *node);
 node_t *Diff             (node_t *expr, const char *diffvar);
+node_t *Taylor           (node_t *root, const char *diffvar, double dot, int ord);
+int     Factor           (int num);   
+node_t *Solve            (node_t *root, const char *var, const double num);
+void    Replace          (node_t *root, const char *var, const double num);
 node_t *CopyNode         (node_t *node);
 
-int CurtailConsts (node_t *root);
-int CurtailAdd    (node_t *root);
-int CurtailSub    (node_t *root);
-int CurtailMul    (node_t *root);
-int CurtailDiv    (node_t *root);
-int CurtailPow    (node_t *root);
+int CurtailConsts (node_t *root, node_t *treepeak = nullptr, int isprint = false);
+int CurtailAdd    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailSub    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailMul    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailDiv    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailPow    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailLn     (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailSin    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailCos    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailTg     (node_t *root, node_t *treepeak, int *ischanged, int isprint);
+int CurtailCtg    (node_t *root, node_t *treepeak, int *ischanged, int isprint);
 
 
 #endif

@@ -22,26 +22,26 @@ node_t *OpNodeCtor (int op, node_t *left, node_t *right) {
     return node;
 }
 
-node_t *NumNodeCtor (elem_t num, node_t *left, node_t *right) {
+node_t *NumNodeCtor (elem_t num) {
 
     node_t *node = (node_t*) calloc(sizeof(node_t), 1);
 
     node->val      = VAL_NUM;
     node->data.num = num;
-    node->left  = left;
-    node->right = right;
+    node->left  = nullptr;
+    node->right = nullptr;
 
     return node;
 }
 
-node_t *VarNodeCtor (char *var, node_t *left, node_t *right) {
+node_t *VarNodeCtor (const char *var) {
 
     node_t *node = (node_t*) calloc(sizeof(node_t), 1);
 
     node->val = VAL_VAR;
     strncpy (node->data.var, var, MAX_VAR_NAME_LEN);
-    node->left  = left;
-    node->right = right;
+    node->left  = nullptr;
+    node->right = nullptr;
 
     return node;
 }
@@ -125,6 +125,10 @@ node_t *Diff (node_t *expr, const char *diffvar) {
         }
 
         case OP_POW:{
+
+            if (expr->right->val == VAL_NUM) {
+                return OpNodeCtor(OP_MUL, OpNodeCtor(OP_MUL, NumNodeCtor(expr->right->data.num), Diff(expr->left, diffvar)), OpNodeCtor(OP_POW, CopyNode(expr->left), NumNodeCtor(expr->right->data.num - 1)));
+            }
 
             node_t *mulnode = OpNodeCtor(OP_MUL, CopyNode(expr->right), OpNodeCtor(OP_LN, nullptr, CopyNode(expr->left)));
 
@@ -211,6 +215,73 @@ node_t *Diff (node_t *expr, const char *diffvar) {
     return nullptr;
 }
 
+node_t *Taylor (node_t *root, const char *diffvar, double point, int ord) {
+
+    RET_ON_VAL(!root, ERR_INVAL_ARG, nullptr);
+
+    node_t *taylor = Solve(root, diffvar, point);
+    node_t *diff   = CopyNode(root);
+
+    printf("Tayloring...\n");
+
+    for (int i = 1; i <= ord; i++) {
+
+        
+        node_t *curdiff = Diff(diff, diffvar);
+        DiffNodeDtor(diff);
+        diff = CopyNode(curdiff);
+        DiffNodeDtor(curdiff);
+
+        taylor = OpNodeCtor(OP_ADD, taylor,\
+                                    OpNodeCtor(OP_DIV, OpNodeCtor(OP_MUL, Solve(diff, diffvar, point),\
+                                                       OpNodeCtor(OP_POW, OpNodeCtor(OP_SUB, VarNodeCtor("x"), NumNodeCtor(point)),\
+                                                                          NumNodeCtor(i))),\
+                                    NumNodeCtor(Factor(i))));
+    }
+
+    CurtailConsts(taylor, taylor, true);
+
+    DiffNodeDtor(diff);
+
+    printf("Tayloring end!\n");
+
+    return taylor;
+}
+
+int Factor (int num) {
+
+    if (num == 0) return 1;
+
+    return Factor(num - 1) * num;
+}
+
+node_t *Solve(node_t *root, const char *var, const double num) {
+
+    node_t *node = CopyNode(root);
+
+    Replace(node, var, num);
+    CurtailConsts(node);
+
+    return node;
+}
+
+void Replace(node_t *root, const char *var, const double num) {
+
+    if (!root) return;
+
+    if (root->val == VAL_OP) {
+        Replace(root->left , var, num);
+        Replace(root->right, var, num);
+    }
+
+    if (root->val == VAL_VAR && !strcmp(root->data.var, var)) {
+
+        node_t *node = NumNodeCtor(num);
+        *root = *node;
+        DiffNodeDtor(node);
+    }
+}
+
 node_t *CopyNode (node_t *node) {
 
     if (!node) return nullptr;
@@ -227,7 +298,7 @@ node_t *CopyNode (node_t *node) {
     return newnode;
 }
 
-int CurtailConsts (node_t *root) {
+int CurtailConsts (node_t *root, node_t *treepeak, int isprint) {
 
     RET_ON_VAL(!root, ERR_INVAL_ARG, -1);
 
@@ -236,38 +307,138 @@ int CurtailConsts (node_t *root) {
 
     switch (root->data.op){
 
-        case OP_ADD:
-            return CurtailAdd(root);
-            break;
+        case OP_ADD:{
+            
+            int ischanged = false;
+            int isconst   = CurtailAdd(root, treepeak, &ischanged, isprint);
 
-        case OP_SUB:
-            return CurtailSub(root);
-            break;
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
 
-        case OP_MUL:
-            return CurtailMul(root);
-            break;
+            return isconst;
 
-        case OP_DIV:
-            return CurtailDiv(root);
             break;
+        }
 
-        case OP_POW:
-            return CurtailPow(root);
+        case OP_SUB:{
+            
+            int ischanged = false;
+            int isconst   = CurtailSub(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
             break;
+        }
+
+        case OP_MUL:{
+            
+            int ischanged = false;
+            int isconst   = CurtailMul(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_DIV:{
+            
+            int ischanged = false;
+            int isconst   = CurtailDiv(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_POW:{
+            
+            int ischanged = false;
+            int isconst   = CurtailPow(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_LN:{
+            
+            int ischanged = false;
+            int isconst   = CurtailLn(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_SIN:{
+            
+            int ischanged = false;
+            int isconst   = CurtailSin(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_COS:{
+            
+            int ischanged = false;
+            int isconst   = CurtailCos(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_TG:{
+            
+            int ischanged = false;
+            int isconst   = CurtailTg(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
+
+        case OP_CTG:{
+            
+            int ischanged = false;
+            int isconst   = CurtailCtg(root, treepeak, &ischanged, isprint);
+
+            if (isprint && ischanged) PrintToLaTex(treepeak, "LaTex.tex");
+
+            return isconst;
+
+            break;
+        }
         
         default:
-            CurtailConsts(root->right);
+            CurtailConsts(root->right, treepeak, isprint);
             break;
     }
 
     return 0;
 }
 
-int CurtailAdd(node_t *root) {
+int CurtailAdd(node_t *root, node_t *treepeak, int *ischanged, int isprint) {
 
-    int curleft  = CurtailConsts(root->left);
-    int curright = CurtailConsts(root->right);
+    int curleft  = CurtailConsts(root->left,  treepeak, isprint);
+    int curright = CurtailConsts(root->right, treepeak, isprint);
 
     if (curleft == 1 && curright == 1) {
 
@@ -278,6 +449,7 @@ int CurtailAdd(node_t *root) {
         DiffNodeDtor(root->left);
         DiffNodeDtor(root->right);
 
+        *ischanged = true;
         return 1;
     }
     else if (curleft == 1 || curright == 1) {
@@ -290,6 +462,7 @@ int CurtailAdd(node_t *root) {
             FreeOnlyThisNode(root->right);
 
             *root = node;
+            *ischanged = true;
         }
         else if (curright && IsEqDoubleNums(root->right->data.num, 0)) {
 
@@ -299,16 +472,17 @@ int CurtailAdd(node_t *root) {
             DiffNodeDtor    (root->right);
 
             *root = node;
+            *ischanged = true;
         }
     }
 
     return 0;
 }
 
-int CurtailSub (node_t *root) {
+int CurtailSub (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
 
-    int curleft  = CurtailConsts(root->left);
-    int curright = CurtailConsts(root->right);
+    int curleft  = CurtailConsts(root->left,  treepeak, isprint);
+    int curright = CurtailConsts(root->right, treepeak, isprint);
 
     if (curleft == 1 && curright == 1) {
 
@@ -319,6 +493,7 @@ int CurtailSub (node_t *root) {
         DiffNodeDtor(root->left);
         DiffNodeDtor(root->right);
 
+        *ischanged = true;
         return 1;
     }
     else if (curleft == 1 || curright == 1) {
@@ -330,6 +505,7 @@ int CurtailSub (node_t *root) {
             DiffNodeDtor    (root->left);
             FreeOnlyThisNode(root->right);
 
+            *ischanged = true;
             *root = node;
         }
         else if (curright && IsEqDoubleNums(root->right->data.num, 0)) {
@@ -339,6 +515,7 @@ int CurtailSub (node_t *root) {
             FreeOnlyThisNode(root->left);
             DiffNodeDtor    (root->right);
 
+            *ischanged = true;
             *root = node;
         }
     }
@@ -346,10 +523,10 @@ int CurtailSub (node_t *root) {
     return 0;
 }
 
-int CurtailMul (node_t *root) {
+int CurtailMul (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
 
-    int curleft  = CurtailConsts(root->left);
-    int curright = CurtailConsts(root->right);
+    int curleft  = CurtailConsts(root->left,  treepeak, isprint);
+    int curright = CurtailConsts(root->right, treepeak, isprint);
 
     if (curleft == 1 && curright == 1) {
 
@@ -360,6 +537,7 @@ int CurtailMul (node_t *root) {
         DiffNodeDtor(root->left);
         DiffNodeDtor(root->right);
 
+        *ischanged = true;
         return 1;
     }
     else if (curleft == 1 || curright == 1) {
@@ -373,6 +551,7 @@ int CurtailMul (node_t *root) {
                 DiffNodeDtor    (root->left);
                 FreeOnlyThisNode(root->right);
 
+                *ischanged = true;
                 *root = node;
             }
             else if (IsEqDoubleNums(root->left->data.num, 0)) {
@@ -386,6 +565,7 @@ int CurtailMul (node_t *root) {
 
                 DiffNodeDtor(node);
 
+                *ischanged = true;
                 return 1;   
             }
         }
@@ -398,6 +578,7 @@ int CurtailMul (node_t *root) {
                 FreeOnlyThisNode(root->left);
                 DiffNodeDtor    (root->right);
 
+                *ischanged = true;
                 *root = node;
             }
             else if (IsEqDoubleNums(root->right->data.num, 0)) {
@@ -410,7 +591,8 @@ int CurtailMul (node_t *root) {
                 *root = *node;
 
                 DiffNodeDtor(node);
-
+                
+                *ischanged = true;
                 return 1;
             }
         }
@@ -419,10 +601,10 @@ int CurtailMul (node_t *root) {
     return 0;
 }
 
-int CurtailDiv (node_t *root) {
+int CurtailDiv (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
 
-    int curleft  = CurtailConsts(root->left);
-    int curright = CurtailConsts(root->right);
+    int curleft  = CurtailConsts(root->left,  treepeak, isprint);
+    int curright = CurtailConsts(root->right, treepeak, isprint);
 
     if (curleft == 1 && curright == 1) {
 
@@ -432,7 +614,8 @@ int CurtailDiv (node_t *root) {
         DiffNodeDtor(node);
         DiffNodeDtor(root->left);
         DiffNodeDtor(root->right);
-
+        
+        *ischanged = true;
         return 1;
     }
     else if (curleft == 1 || curright == 1) {
@@ -448,6 +631,7 @@ int CurtailDiv (node_t *root) {
 
             DiffNodeDtor(node);
 
+            *ischanged = true;
             return 1;   
         }
         else if (curright && IsEqDoubleNums(root->right->data.num, 1)) {
@@ -457,6 +641,7 @@ int CurtailDiv (node_t *root) {
             FreeOnlyThisNode(root->left);
             DiffNodeDtor    (root->right);
 
+            *ischanged = true;
             *root = node;
         }
     }
@@ -464,10 +649,10 @@ int CurtailDiv (node_t *root) {
     return 0;
 }
 
-int CurtailPow (node_t *root) {
+int CurtailPow (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
 
-    int curleft  = CurtailConsts(root->left);
-    int curright = CurtailConsts(root->right);
+    int curleft  = CurtailConsts(root->left,  treepeak, isprint);
+    int curright = CurtailConsts(root->right, treepeak, isprint);
 
     if (curleft == 1 && curright == 1) {
 
@@ -478,6 +663,7 @@ int CurtailPow (node_t *root) {
         DiffNodeDtor(root->left);
         DiffNodeDtor(root->right);
 
+        *ischanged = true;
         return 1;
     }
     else if (curleft == 1 || curright == 1) {
@@ -493,6 +679,7 @@ int CurtailPow (node_t *root) {
 
             DiffNodeDtor(node);
 
+            *ischanged = true;
             return 1;   
         }
         else if (curright && IsEqDoubleNums(root->right->data.num, 1)) {
@@ -502,10 +689,112 @@ int CurtailPow (node_t *root) {
             FreeOnlyThisNode(root->left);
             DiffNodeDtor    (root->right);
 
+            *ischanged = true;
             *root = node;
         }
     }
 
     return 0;
 } 
+
+int CurtailLn (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
+
+    int curright = CurtailConsts(root->right, treepeak, isprint);
+
+    if (curright) {
+
+        node_t *node = NumNodeCtor(log(root->right->data.num));
+        *root = *node;
+
+        DiffNodeDtor(node);
+        DiffNodeDtor(root->left);
+        DiffNodeDtor(root->right);
+
+        *ischanged = true;
+        return 1;
+    }
+
+    return 0;
+}
+
+int CurtailSin (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
+
+    int curright = CurtailConsts(root->right, treepeak, isprint);
+
+    if (curright) {
+
+        node_t *node = NumNodeCtor(sin(root->right->data.num));
+        *root = *node;
+
+        DiffNodeDtor(node);
+        DiffNodeDtor(root->left);
+        DiffNodeDtor(root->right);
+
+        *ischanged = true;
+        return 1;
+    }
+
+    return 0;
+}
+
+int CurtailCos (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
+
+    int curright = CurtailConsts(root->right, treepeak, isprint);
+
+    if (curright) {
+
+        node_t *node = NumNodeCtor(cos(root->right->data.num));
+        *root = *node;
+
+        DiffNodeDtor(node);
+        DiffNodeDtor(root->left);
+        DiffNodeDtor(root->right);
+
+        *ischanged = true;
+        return 1;
+    }
+
+    return 0;
+}
+
+int CurtailTg (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
+
+    int curright = CurtailConsts(root->right, treepeak, isprint);
+
+    if (curright) {
+
+        node_t *node = NumNodeCtor(tan(root->right->data.num));
+        *root = *node;
+
+        DiffNodeDtor(node);
+        DiffNodeDtor(root->left);
+        DiffNodeDtor(root->right);
+
+        *ischanged = true;
+        return 1;
+    }
+
+    return 0;
+}
+
+int CurtailCtg (node_t *root, node_t *treepeak, int *ischanged, int isprint) {
+
+    int curright = CurtailConsts(root->right, treepeak, isprint);
+
+    if (curright) {
+
+        node_t *node = NumNodeCtor(1/tan(root->right->data.num));
+        *root = *node;
+
+        DiffNodeDtor(node);
+        DiffNodeDtor(root->left);
+        DiffNodeDtor(root->right);
+
+        *ischanged = true;
+        return 1;
+    }
+
+    return 0;
+}
+
 

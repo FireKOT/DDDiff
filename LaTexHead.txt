@@ -4,6 +4,15 @@
 \usepackage{graphics}
 \usepackage{amsfonts}
 \title{Math Meth}
+
+\usepackage{geometry}
+\geometry{papersize={40 cm,40 cm}}
+\geometry{left=2cm}
+\geometry{right=2cm}
+\geometry{top=2cm}
+\geometry{bottom=2cm}
+
+\linespread{2}
 \date{}
 \begin{document}
 \maketitle

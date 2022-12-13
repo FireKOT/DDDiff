@@ -5,6 +5,23 @@
 #include "config.h"
 #include "general.h"
 
+
+static const int PhrasesC = 10;
+
+static const char *Phrases[PhrasesC] = {
+    "Очевидно, что",
+    "Знающий читатель заметит, что",
+    "Понимающий бдитель науки осознает, что",
+    "Здравомыслящий человек знает, что",
+    "Если задуматься, то станет понятно, что",
+    "Оставим читателю в качестве упражения доказать, что это эквивалентно",
+    "Я не понимаю что тут написано, но",
+    "Где я?",
+    "Кто здесь?",
+    "Мотьематичненькое преобразование",
+};
+
+
 void InitLaTex (const char *file_name) {
 
     char name[STRS] = {};
@@ -15,7 +32,7 @@ void InitLaTex (const char *file_name) {
 
     char *head = GetText("LaTexHead.txt");
 
-    fprintf(LaTex,  "%s", head);
+    fprintf(LaTex,  "%s\n", head);
 
     FreeText(head);
 
@@ -30,9 +47,12 @@ void PrintToLaTex (node_t *root, const char *file_name) {
     FILE *LaTex = fopen(name, "a");
     RET_ON_VAL(!LaTex, ERR_INCRR_FILE, );
 
-    fprintf(LaTex,  "$$ ");
+    fprintf(LaTex, "%s\n", Phrases[rand() % PhrasesC]);
+
+    fprintf(LaTex,  "\\newline\n");
+    fprintf(LaTex,  "$ ");
     PrintTree(root, LaTex);
-    fprintf(LaTex,  " $$\n");
+    fprintf(LaTex,  " $\n\n");
 
     fclose(LaTex);
 }
@@ -105,7 +125,9 @@ void PrintTree (node_t *node, FILE *output) {
         
         case OP_POW:
             fprintf(output, " {");
+            if (node->left->val != VAL_NUM && node->left->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->left, output);
+            if (node->left->val != VAL_NUM && node->left->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "}^{");
             PrintTree(node->right, output);
             fprintf(output, "} ");
@@ -114,56 +136,72 @@ void PrintTree (node_t *node, FILE *output) {
 
         case OP_SIN:
             fprintf(output, " \\sin{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
         
         case OP_COS:
             fprintf(output, " \\cos{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
 
         case OP_TG:
             fprintf(output, " \\tg{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
 
         case OP_CTG:
             fprintf(output, " \\ctg{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
 
         case OP_ARCSIN:
             fprintf(output, " \\arcsin{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
         
         case OP_ARCCOS:
             fprintf(output, " \\arccos{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
 
         case OP_ARCTG:
             fprintf(output, " \\arctg{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
 
         case OP_ARCCTG:
             fprintf(output, " \\arcctg{");
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, "(");
             PrintTree(node->right, output);
+            if (node->right->val != VAL_NUM && node->right->val != VAL_VAR) fprintf(output, ")");
             fprintf(output, "} ");
 
             break;
